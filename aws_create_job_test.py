@@ -1,5 +1,7 @@
 import os, platform
 import argparse
+import subprocess
+import json
 
 # Allow to interact with CLI on windows as well as Linux
 if platform.system() == "Windows":
@@ -30,4 +32,20 @@ parser.add_argument('--jobName', type=str, help='Name of job to create, if nothi
 
 args = parser.parse_args()
 
-# Check to see if job doc exists
+# If no job name get list of existing job names to create a UUID for the new job, else try and create a job as directed
+if args.jobName :
+    print subprocess.check_output(['aws', '--output', 'json', 'iot', 'create-job', '--job-id', args.jobName, '--targets', args.thingName, '--document-source', args.jobDoc])
+else :
+    jobList = subprocess.check_output(['aws', '--output', 'json', 'iot', 'list-jobs'])
+
+    parsed_jobList = json.loads(jobList)
+
+    targetJobNum = 0
+
+    for job in parsed_jobList["jobs"] :
+        if int(job["jobId"]) > targetJobNum :
+            targetJobNum = int(job["jobId"])
+
+    targetJobNum = targetJobNum + 1
+
+    print subprocess.check_output(['aws', '--output', 'json', 'iot', 'create-job', '--job-id', str(targetJobNum), '--targets', args.thingName, '--document-source', args.jobDoc])
